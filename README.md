@@ -4,12 +4,10 @@ MyGamebaseCCF
 A sample of Intel CCF based on cocos2dx
 
 
-Step1:Intel CCF
+Setp1: 5.8-5.9 Read the Intel CCF Documentation, basic concept;  Figure out the target of the project.
 
-Step2: HelloWorldIntel CCFDiscoeryAndroid app
-5.12-5.16
+Step2: 5.12-5.16 Use the discovery of CCF search and display users nearby in a app based on cocos2dx.
 
-Step3: HelloWorldIdentity
-5.19-5.30
+Step3: 5.19-5.30 Making a plane game with identity of CCF and users in proximity can online interact in this game.
 
-Step4: p2pIntel CCFP2P6.1-6.20               
+Setp4: 6.1-6.30 Realise the real Online battle in the plane game through P2P function of CCF.            
