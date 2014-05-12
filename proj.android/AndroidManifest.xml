@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+      package="com.cocos2dx.intel"
+      android:versionCode="1"
+      android:versionName="1.0">
+
+    <uses-sdk android:minSdkVersion="9"/>
+    <uses-feature android:glEsVersion="0x00020000" />
+
+    <application android:label="@string/app_name"
+                 android:icon="@drawable/icon">
+
+
+        <activity android:name="org.cocos2dx.cpp.AppActivity"
+                  android:label="@string/app_name"
+                  android:screenOrientation="landscape"
+                  android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+                  android:configChanges="orientation">
+
+            <!-- Tell NativeActivity the name of our .so -->
+            <meta-data android:name="android.app.lib_name"
+                       android:value="cocos2dcpp" />
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        
+ 		<activity
+            android:name="com.intel.startup.CloudAuthorizationActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            android:permission="android.permission.INTERNET"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity
+            android:name="com.intel.startup.NewUnbox"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+
+         <service
+            android:name="org.cocos2dx.cpp.CCFManager"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="org.cocos2dx.cpp.CCFManager" />
+            </intent-filter>
+        </service>
+        <service
+            android:name="org.cocos2dx.cpp.MyAppRegister"
+            android:exported="true"
+            android:permission="android.permission.INTERNET">
+
+            <intent-filter>
+                <action android:name="org.cocos2dx.cpp.REGISTER_APP" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name="com.intel.inproclib.InProcService"
+            android:permission="android.permission.INTERNET">
+
+            <intent-filter>
+                <action android:name="org.cocos2dx.cpp.IN_PROC_SERVICE" />
+            </intent-filter>
+
+        </service>
+				
+    </application>
+
+    <supports-screens android:anyDensity="true"
+                      android:smallScreens="true"
+                      android:normalScreens="true"
+                      android:largeScreens="true"
+                      android:xlargeScreens="true"/>
+
+    <uses-permission android:name="android.permission.INTERNET"/>
+   
+   	<uses-permission android:name="android.permission.VIBRATE" />
+	<uses-permission android:name="android.permission.READ_CONTACTS" />
+	<uses-permission android:name="android.permission.READ_PROFILE" />
+	<!-- ***********INPROC ADDITIONS*********** -->
+	<uses-permission android:name="android.permission.NFC" />
+	<uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+	<uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+	<uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+	<uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+	<uses-permission android:name="android.permission.READ_PHONE_STATE" />
+	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+	<uses-permission android:name="android.permission.BLUETOOTH" />
+	<uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />    
+	<uses-permission android:name="android.permission.READ_LOGS" />
+	<!-- ***********INPROC ADDITIONS*********** -->
+    
+</manifest> 
