@@ -26,129 +26,172 @@ THE SOFTWARE.
 ****************************************************************************/
 package org.cocos2dx.cpp;
 
-import org.cocos2dx.lib.Cocos2dxActivity;
+import java.util.UUID;
 
-import android.content.ComponentName;
-import android.content.Intent;
-import android.content.ServiceConnection;
+import org.cocos2dx.cpp.AbstractServiceUsingActivity;
+
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.app.ProgressDialog;
+import android.content.DialogInterface;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.IBinder;
+import android.os.Environment;
 import android.util.Log;
 import android.widget.Toast;
 
+import org.cocos2dx.cpp.R;
+import com.intel.stc.events.DiscoveryNodeUpdateEvent;
+import com.intel.stc.events.StcException;
+import com.intel.stc.interfaces.StcDiscoveryNodeUpdateEventListener;
+import com.intel.stc.ipc.STCLoggingLevel;
+import com.intel.stc.ipc.STCLoggingMode;
+import com.intel.stc.ipc.STCLoggingModule;
 import com.intel.stc.lib.StcLib;
 import com.intel.stc.slib.IStcServInetClient;
+import com.intel.stc.utility.StcDiscoveryNode;
 
-public class AppActivity extends Cocos2dxActivity implements IStcServInetClient {
+public class AppActivity extends AbstractServiceUsingActivity implements StcDiscoveryNodeUpdateEventListener {
 	public static final String TAG = "Cocos2dxActivity";
-	public static final String SERVICE_INTENT = "org.cocos2dx.cpp.CCFManager";
-
-	boolean isBound = false;
-
-	private CCFManager mService;
-	private Cocos2dxServiceConnection mConnection = new Cocos2dxServiceConnection();
-	private Handler mHandler = new Handler();
+	private Dialog platformStartAlert;
+	private static boolean cloudRegistrationFailed = false;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		doStartService();
+		//platformStartAlert = ProgressDialog.show(this, "", "Please wait, initializing StcLib platform.");
+		//platformStartAlert.show();		
 	}
 
-	@Override
-	public void libPrepared(StcLib arg0) {
-		mHandler.post(new Runnable() {
-			public void run() {
-				Toast.makeText(AppActivity.this, "Platform Prepared",
-						Toast.LENGTH_SHORT).show();
+	/*Start**************STC callback.**********/
+	private void StartAgent(StcLib slib) {
+		// Enable this app for Intel CCF Developer Central Online logging.
+		//
+		// WARNING:  Enabling online debugging should be made only while the product is in a development environment on secure (non-public) networks.
+		//				                     It should NOT be enabled for release products as enabling online debugging poses security risks on non-secure networks.
+		//				                     Prior to releasing a product, either remove this call or specify OFFLINE logging only.
+		// Start the Agent
+		UUID appGuid = MyAppRegister.id.appId;
+		String appName = this.getString(R.string.app_name);
+
+		String logPath = Environment.getExternalStoragePublicDirectory(
+				Environment.DIRECTORY_DOWNLOADS).getPath();
+		try {
+			if (slib != null) {
+				if (slib != null) {					
+					slib.startAgent(appGuid, appName,
+							STCLoggingMode.LogMode_Live, logPath
+									+ "/simpleDiscoveryAgentLog.txt",
+							STCLoggingModule.LogModule_All,
+							STCLoggingLevel.Info, false);
+				}
 			}
-		});
-
-	}
-
-	@Override
-	public void platformError() {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void platformMissing() {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void requestStartActivityForResult(Intent arg0) {
-		// TODO Auto-generated method stub
-
-	}
-
-	protected void doStartService() {
-		Log.i(TAG, "starting service");
-		Intent servIntent = new Intent(SERVICE_INTENT);
-		startService(servIntent);
-	}
+		} catch (StcException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}	
 
 	@Override
 	protected void onResume() {
 		Log.i(TAG, "resuming");
-		doBindService();
 		super.onResume();
 	}
 
-	private void doBindService() {
-		if (!isBound) {
-			Log.i(TAG, "binding service");
-			Intent servIntent = new Intent(SERVICE_INTENT);
-			isBound = bindService(servIntent, mConnection, 0);
-			if (!isBound)
-				Log.i(TAG, "service did not bind.");
-		}
-	}
 
 	@Override
 	protected void onPause() {
 		Log.i(TAG, "pausing");
-		doUnbindService();
 		super.onPause();
 	}
 
-	private void doUnbindService() {
-		if (isBound) {
-			Log.i(TAG, "unbinding service ");
-			isBound = false;
-			unbindService(mConnection);
+	@Override
+	public void sessionsDiscovered() {
+		//serviceManager.getSessions();
+	}
+
+	@Override
+	protected void onStcLibPrepared() {
+		
+		final StcLib lib = serviceManager.getSTCLib();
+		if(lib!=null){
+			lib.addStcDiscoveryNodeUpdateEventListener(AppActivity.this);
+			StartAgent(lib);
+			myHandler.post(new Runnable() {
+				@Override
+				public void run() {
+					if(platformStartAlert!=null && platformStartAlert.isShowing()){
+						platformStartAlert.dismiss();
+					}
+				}
+			});
 		}
+		
+		displayToast("Platform Prepared");
 	}
-
-	private void doStopService() {
-		Log.i(TAG, "shutting down");
-		Intent servIntent = new Intent(SERVICE_INTENT);
-
-		doUnbindService();
-		stopService(servIntent);
+	
+	@Override
+	public void discoveryNodeUpdate(DiscoveryNodeUpdateEvent event) {
+		Log.i(TAG, "discoveryNodeUpdate event.getStatus()"+event.getStatus()+event.getNode().getName()+"Event type: "+event.getEventType()+" error code: "+event.getDiscoveryNodeError());
+		if(event.getStatus() == 1)
+		{
+			Log.e(TAG, "Discovery node update failed - "+event.getDiscoveryNodeError().toString());
+			if(!event.getDiscoveryNodeError().equals(DiscoveryNodeUpdateEvent.DiscoveryNodeError.noError))
+				displayErrorToast(event.getDiscoveryNodeError().toString());
+			return;
+		}
+		
+		StcDiscoveryNode node = event.getNode();
+		switch(event.getEventType())
+		{
+			case CREATE:
+				Log.i(LOGC , "Creating Node "+node.getName());
+				break;
+			case DELETE:
+				Log.i(LOGC , "Deleting Node "+node.getName());
+				break;
+			case JOIN:
+				Log.i(LOGC , "Joining Node "+node.getName());
+				break;
+			case LEAVE:
+				Log.i(LOGC , "Leaving Node "+node.getName());
+				break;
+			case PUBLISH:
+				Log.i(LOGC , "Publishing Node "+node.getName());
+				break;
+			default:
+				break;
+		}		
 	}
-
-	/* ServiceConnection implementation */
-	public class Cocos2dxServiceConnection implements ServiceConnection {
-		boolean serviceStopped = false;
-
-		public void onServiceConnected(ComponentName className, IBinder binder) {
-			synchronized (this) {
-				Log.i(TAG, "service connected.");
-				mService = (CCFManager) ((CCFManager.StcServInetBinder) binder).getService();
-				if (mService != null)
-					mService.setLibPreparedCallback(AppActivity.this, mHandler);
+	
+	//To display android toast message.
+	private void displayToast(String value){
+		Toast.makeText(this, value, Toast.LENGTH_SHORT).show();
+	}
+	
+	//Display toast- Discovery Node update failed.
+	private void displayErrorToast(final String value){
+		myHandler.post(new Runnable() {
+			
+			@Override
+			public void run() {
+				final AlertDialog.Builder builder = new AlertDialog.Builder(AppActivity.this);
+				builder.setTitle("Discovery node update failed - "+value);
+				builder.setCancelable(true);
+				
+				builder.setNegativeButton("Close", new DialogInterface.OnClickListener() {
+					@Override
+					public void onClick(DialogInterface dialog, int which)
+					{
+						if(builder!=null)
+							dialog.dismiss();
+					}
+				});
+				builder.show();
 			}
-		}
-
-		public void onServiceDisconnected(ComponentName className) {
-			Log.i(TAG, "service disconnected.");
-
-			mService = null;
-		}
-
-	};	
+		});
+		
+	}	
+	
 }
+
+

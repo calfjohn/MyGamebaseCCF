@@ -6,14 +6,14 @@ import java.util.List;
 import android.content.Context;
 import android.util.Log;
 
-import com.cocos2dx.intel.R;
+import org.cocos2dx.cpp.R;
 import com.intel.stc.lib.GadgetRegistration;
 import com.intel.stc.utility.StcApplicationId;
 import com.intel.stc.lib.AppRegisterService;
 
 public class MyAppRegister extends AppRegisterService {
 	private static final String TAG = "MyAppRegister";
-	public static final String      LAUNCH_INTENT       = "org.cocos2dx.intel";
+	public static final String      LAUNCH_INTENT       = "org.cocos2dx.cpp";
     public static final String      APP_UUID                = "7A1B397B-B576-44C4-943F-1BEF4F490C06";
     // Simple Chat Keys
     private static final String     clientId            = "WqODOHahg3xw6WVB0BbTMi9yazTkBoQG";
