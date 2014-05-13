@@ -58,8 +58,8 @@ public class AppActivity extends AbstractServiceUsingActivity implements StcDisc
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		//platformStartAlert = ProgressDialog.show(this, "", "Please wait, initializing StcLib platform.");
-		//platformStartAlert.show();		
+		platformStartAlert = ProgressDialog.show(this, "", "Please wait, initializing StcLib platform.");
+		platformStartAlert.show();		
 	}
 
 	/*Start**************STC callback.**********/
