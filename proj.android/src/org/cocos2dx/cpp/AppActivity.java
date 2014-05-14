@@ -26,6 +26,7 @@ THE SOFTWARE.
 ****************************************************************************/
 package org.cocos2dx.cpp;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.cocos2dx.cpp.AbstractServiceUsingActivity;
@@ -40,6 +41,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import org.cocos2dx.cpp.R;
+
 import com.intel.stc.events.DiscoveryNodeUpdateEvent;
 import com.intel.stc.events.StcException;
 import com.intel.stc.interfaces.StcDiscoveryNodeUpdateEventListener;
@@ -49,9 +51,10 @@ import com.intel.stc.ipc.STCLoggingModule;
 import com.intel.stc.lib.StcLib;
 import com.intel.stc.slib.IStcServInetClient;
 import com.intel.stc.utility.StcDiscoveryNode;
+import com.intel.stc.utility.StcSession;
 
 public class AppActivity extends AbstractServiceUsingActivity implements StcDiscoveryNodeUpdateEventListener {
-	public static final String TAG = "Cocos2dxActivity";
+	public static final String TAG = "Cocos2dxActivity MyGame";
 	private Dialog platformStartAlert;
 	private static boolean cloudRegistrationFailed = false;
 
@@ -106,8 +109,17 @@ public class AppActivity extends AbstractServiceUsingActivity implements StcDisc
 
 	@Override
 	public void sessionsDiscovered() {
-		//serviceManager.getSessions();
+		Log.i(TAG, "sessionsDiscovered");
+		
+		List<StcSession> newList = serviceManager.getSessions();
+		for( int i = newList.size() - 1; i >= 0 ; i-- )
+		{
+			StcSession session = newList.get(i);
+			AppActivity.SessionUpdate(session.getUserName()+session.getSessionName());			
+		}
 	}
+	
+    private static native void SessionUpdate(String SeesionName);
 
 	@Override
 	protected void onStcLibPrepared() {

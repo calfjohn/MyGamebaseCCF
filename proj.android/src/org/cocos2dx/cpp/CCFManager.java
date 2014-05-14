@@ -25,7 +25,7 @@ import com.intel.stc.utility.StcSession;
 
 public class CCFManager extends StcServiceInet implements StcConnectionListener, StcSessionUpdateListener, StcLocalSessionUpdateListener, IStcActivity{
 
-	private static final String TAG = "Cocos2dxCCFManager";
+	private static final String TAG = "Cocos2dxCCFManager MyGame";
 	private boolean bundleParsed = false;
 	private Bundle initBundle;
 	private ArrayList<ISimpleDiscoveryListener> listeners = new ArrayList<ISimpleDiscoveryListener>();

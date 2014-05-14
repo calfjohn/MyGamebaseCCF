@@ -12,7 +12,7 @@ import com.intel.stc.utility.StcApplicationId;
 import com.intel.stc.lib.AppRegisterService;
 
 public class MyAppRegister extends AppRegisterService {
-	private static final String TAG = "MyAppRegister";
+	private static final String TAG = "MyAppRegister MyGame";
 	public static final String      LAUNCH_INTENT       = "org.cocos2dx.cpp";
     public static final String      APP_UUID                = "7A1B397B-B576-44C4-943F-1BEF4F490C06";
     // Simple Chat Keys

@@ -57,7 +57,7 @@ import com.intel.stc.slib.IStcServInetClient;
  */
 public abstract class AbstractServiceUsingActivity extends Cocos2dxActivity implements IStcServInetClient, ISimpleDiscoveryListener 
 {
-	public static final String LOGC = "sc abstract";
+	public static final String LOGC = "sc abstract MyGame";
 	public static final String ServiceIntent = "org.cocos2dx.cpp.CCFManager";
 	
 	private static final int STCLIB_ACTIVITY_REQUEST = 23;
