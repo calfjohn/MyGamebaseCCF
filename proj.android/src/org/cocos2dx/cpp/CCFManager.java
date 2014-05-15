@@ -137,12 +137,14 @@ public class CCFManager extends StcServiceInet implements StcConnectionListener,
 
 	@Override
 	public void localSessionUpdated() {
+		postSessionListChanged();		
 		Log.i(TAG, "localSessionUpdated");		
 	}
 
 	@Override
 	public void sessionUpdated(StcSessionUpdateEvent arg0) {
-		Log.i(TAG, "sessionUpdated");		
+		postSessionListChanged();
+		Log.i(TAG, "sessionUpdated");				
 	}
 
 	@Override
