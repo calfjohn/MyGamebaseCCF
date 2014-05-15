@@ -14,10 +14,13 @@ typedef enum tagPaddleState
 class Paddle : public Sprite, public Clonable
 {
     PaddleState        _state;
-
+		String uuid;
 public:
     Paddle(void);
     virtual ~Paddle(void);
+
+		void setUuid(const char *sUuid);
+		const char* getUuid(){return uuid.getCString();}
 
     Rect getRect();
     bool initWithTexture(Texture2D* aTexture);

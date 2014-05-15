@@ -115,11 +115,11 @@ public class AppActivity extends AbstractServiceUsingActivity implements StcDisc
 		for( int i = newList.size() - 1; i >= 0 ; i-- )
 		{
 			StcSession session = newList.get(i);
-			AppActivity.SessionUpdate(session.getUserName()+session.getSessionName());			
+			AppActivity.SessionUpdate(session.getUserName()+session.getSessionName(), session.getSessionUuid().toString());
 		}
 	}
 	
-    private static native void SessionUpdate(String SeesionName);
+    private static native void SessionUpdate(String SeesionName, String sessionUuid);
 
 	@Override
 	protected void onStcLibPrepared() {

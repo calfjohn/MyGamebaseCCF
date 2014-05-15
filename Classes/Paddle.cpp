@@ -2,6 +2,7 @@
 
 Paddle::Paddle(void)
 {
+	uuid = " ";
 }
 
 Paddle::~Paddle(void)
@@ -109,3 +110,10 @@ void Paddle::onTouchEnded(Touch* touch, Event* event)
     
     _state = kPaddleStateUngrabbed;
 } 
+
+
+void Paddle::setUuid(const char *sUuid)
+{
+	uuid = sUuid;
+}
+		
