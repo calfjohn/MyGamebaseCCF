@@ -3,6 +3,7 @@
 Paddle::Paddle(void)
 {
 	uuid = " ";
+  _state = kPaddleStateUngrabbed;
 }
 
 Paddle::~Paddle(void)
@@ -14,6 +15,24 @@ Rect Paddle::getRect()
     auto s = getTexture()->getContentSize();
     return Rect(-s.width / 2, -s.height / 2, s.width, s.height);
 }
+
+Paddle* Paddle::create(const std::string& filename, const char *name)
+{
+    Paddle *sprite = new Paddle();
+    if (sprite && sprite->initWithFile(filename))
+    {
+        sprite->autorelease();
+        
+				auto label = LabelTTF::create(name, "Arial", 24);
+				label->setPosition(sprite->getTexture()->getContentSize().width/2, sprite->getTexture()->getContentSize().height/2);
+				sprite->addChild(label);
+		        
+        return sprite;
+    }
+    CC_SAFE_DELETE(sprite);
+    return nullptr;
+}
+
 
 Paddle* Paddle::createWithTexture(Texture2D* aTexture, const char *name)
 {

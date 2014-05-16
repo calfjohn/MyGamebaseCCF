@@ -40,20 +40,22 @@ bool findPaddle(const char* sessionUuid, CCScene *pNodeParent)
 }
 
 extern "C" {
-	void Java_org_cocos2dx_cpp_AppActivity_SessionUpdate(JNIEnv* env, jobject thiz, jstring sessionName, jstring sessionUuid){
+	void Java_org_cocos2dx_cpp_AppActivity_SessionUpdate(JNIEnv* env, jobject thiz, jstring sessionName, jstring sessionUuid, jstring avatarPath){
 		const char *sName = env->GetStringUTFChars(sessionName, NULL);
 		const char *sUuid = env->GetStringUTFChars(sessionUuid, NULL);
+		const char *sAvatarPath = env->GetStringUTFChars(avatarPath, NULL);
 		
 		LOGD("JNI sessionName:%s sessionUuid:%s", sName, sUuid);
 		
-	  if(Director::getInstance()->getRunningScene() && !findPaddle(sUuid, Director::getInstance()->getRunningScene()))	  
+	  if(Director::getInstance()->getRunningScene())// && !findPaddle(sUuid, Director::getInstance()->getRunningScene()))	  
 	  {
 			Size visibleSize = Director::getInstance()->getVisibleSize();
 			Point origin = Director::getInstance()->getVisibleOrigin();
 	
-			auto paddleTexture = Director::getInstance()->getTextureCache()->addImage("paddle.png");
-			Paddle* paddle = Paddle::createWithTexture(paddleTexture, sName);
-	
+			std::string strFile = sAvatarPath;
+			//auto paddleTexture = Director::getInstance()->getTextureCache()->addImage(strFile);
+			//Paddle* paddle = Paddle::createWithTexture(paddleTexture, sName);
+			Paddle* paddle = Paddle::create(strFile, sName);
 			paddle->setPosition(Point(origin.x + visibleSize.width/2,
 	                origin.y + visibleSize.height/2));
 	                
@@ -65,5 +67,6 @@ extern "C" {
 		
 		env->ReleaseStringUTFChars(sessionName, sName);
 		env->ReleaseStringUTFChars(sessionUuid, sUuid);
+		env->ReleaseStringUTFChars(avatarPath, sAvatarPath);
 	}
 }

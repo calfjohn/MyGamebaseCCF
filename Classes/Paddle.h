@@ -19,6 +19,7 @@ public:
     Paddle(void);
     virtual ~Paddle(void);
 
+    static Paddle* create(const std::string& filename, const char *name);
 		void setUuid(const char *sUuid);
 		const char* getUuid(){return uuid.getCString();}
 

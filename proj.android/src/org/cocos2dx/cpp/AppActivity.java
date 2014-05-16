@@ -26,6 +26,10 @@ THE SOFTWARE.
 ****************************************************************************/
 package org.cocos2dx.cpp;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,6 +39,7 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
@@ -115,11 +120,11 @@ public class AppActivity extends AbstractServiceUsingActivity implements StcDisc
 		for( int i = newList.size() - 1; i >= 0 ; i-- )
 		{
 			StcSession session = newList.get(i);
-			AppActivity.SessionUpdate(session.getUserName()+session.getSessionName(), session.getSessionUuid().toString());
+			AppActivity.SessionUpdate(session.getUserName()+session.getSessionName(), session.getSessionUuid().toString(), saveBmp(session.getPublicAvatar(), ""+i));
 		}
 	}
 	
-    private static native void SessionUpdate(String SeesionName, String sessionUuid);
+    private static native void SessionUpdate(String SeesionName, String sessionUuid, String strAvatarFilePath);
 
 	@Override
 	protected void onStcLibPrepared() {
@@ -203,6 +208,54 @@ public class AppActivity extends AbstractServiceUsingActivity implements StcDisc
 		});
 		
 	}	
+	
+	/**
+	 * 
+	 * @param bmp
+	 * @param strName : file name to stored
+	 */
+	public static String saveBmp(Bitmap bmp, String strName) {
+		FileOutputStream out = null;
+		try {
+		    String status = Environment.getExternalStorageState(); 
+		    if (status.equals(Environment.MEDIA_MOUNTED)) {
+		    	String strDest = Environment
+		    			.getExternalStorageDirectory().getAbsolutePath() + "/cocoassist" + strName;
+		    	
+		    	String path = Environment
+		    			.getExternalStorageDirectory().getAbsolutePath() + "/cocoassist";;
+				File dir = new File( path );
+		    	if (!dir.exists()) {
+					dir.mkdirs();
+				}
+		        File destFile = new File(strDest); 
+		        if (destFile.exists()) { 
+		        	destFile.delete();
+		        } 
+
+				out = new FileOutputStream(strDest);
+				bmp.compress(Bitmap.CompressFormat.PNG, 100, out);
+				out.flush();
+				
+				return strDest;
+		    } 
+		} catch (FileNotFoundException e) { 
+		    e.printStackTrace(); 
+		    return "";
+		} catch (IOException e) {
+		    e.printStackTrace(); 
+		    return "";
+		} finally {
+			if( null != out ) {
+				try {
+					out.close();
+				} catch( Exception e ) {
+					e.printStackTrace();
+				}
+			}
+		}
+		return "";
+	}
 	
 }
 
