@@ -17,6 +17,15 @@ public:
     
     // implement the "static create()" method manually
     CREATE_FUNC(HelloWorld);
+    
+    void addNodeSync(const char* sName, const char* sUuid, const char* sFile);    
+    
+protected:
+    void addNode(float dt);
+    
+		bool findPaddle(const char* sSession);
+    
+    std::mutex _nodeMutex;
 };
 
 #endif // __HELLOWORLD_SCENE_H__

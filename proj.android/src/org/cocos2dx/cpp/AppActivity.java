@@ -220,10 +220,10 @@ public class AppActivity extends AbstractServiceUsingActivity implements StcDisc
 		    String status = Environment.getExternalStorageState(); 
 		    if (status.equals(Environment.MEDIA_MOUNTED)) {
 		    	String strDest = Environment
-		    			.getExternalStorageDirectory().getAbsolutePath() + "/cocoassist" + strName;
+		    			.getExternalStorageDirectory().getAbsolutePath() + "/cocoassist/" + strName;
 		    	
 		    	String path = Environment
-		    			.getExternalStorageDirectory().getAbsolutePath() + "/cocoassist";;
+		    			.getExternalStorageDirectory().getAbsolutePath() + "/cocoassist/";
 				File dir = new File( path );
 		    	if (!dir.exists()) {
 					dir.mkdirs();

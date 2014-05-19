@@ -1,4 +1,15 @@
 #include "HelloWorldScene.h"
+#include "Paddle.h"
+
+
+typedef struct{
+    std::string sName;
+    std::string sUuid;
+    std::string sFile;
+}myNode;
+
+std::list<myNode> listMyNode;    
+
 
 USING_NS_CC;
 
@@ -72,6 +83,8 @@ bool HelloWorld::init()
     // add the sprite as a child to this layer
     this->addChild(sprite, 0);
     
+    listMyNode.clear();
+      
     return true;
 }
 
@@ -88,4 +101,75 @@ void HelloWorld::menuCloseCallback(Ref* pSender)
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_IOS)
     exit(0);
 #endif
+}
+
+void HelloWorld::addNodeSync(const char* sName, const char* sUuid, const char* sFile)
+{
+		CCLog("HelloWorld::addNodeSync Enter");
+		
+    _nodeMutex.lock();
+		CCLog("HelloWorld::_nodeMutex.lock()");
+
+    myNode nodeTemp;
+    nodeTemp.sName = sName;
+    nodeTemp.sFile = sFile;
+    nodeTemp.sUuid = sUuid;
+ 
+    listMyNode.push_back(nodeTemp);
+
+		CCLog("HelloWorld::_nodeMutex.unlock()");
+    _nodeMutex.unlock();
+    
+    this->schedule(schedule_selector(HelloWorld::addNode),0,0,0);
+    	
+		CCLog("HelloWorld::addNodeSync Leave");    	
+}
+
+void HelloWorld::addNode(float dt)
+{
+		CCLog("HelloWorld::addNode Enter");
+		
+    _nodeMutex.lock();
+    
+    Size visibleSize = Director::getInstance()->getVisibleSize();
+    Point origin = Director::getInstance()->getVisibleOrigin();
+    
+    for( auto it=listMyNode.begin(); it!=listMyNode.end(); ++it ) {
+				if(findPaddle(it->sUuid.c_str())) continue;
+
+        Paddle* paddle = Paddle::create(it->sFile.c_str(), it->sName.c_str());
+        paddle->setPosition(Point(origin.x + visibleSize.width/2,
+                                  origin.y + visibleSize.height/2));
+        
+	    paddle->setUuid(it->sUuid.c_str());
+	    paddle->setTag(2014);
+        
+     	addChild(paddle);
+    }
+    listMyNode.clear();
+    
+    _nodeMutex.unlock();
+    
+   CCLog("HelloWorld::addNode Leave");
+
+}
+
+bool HelloWorld::findPaddle(const char* sSession)
+{
+    if(this->getChildrenCount() > 0 && sSession)
+    {
+        CCObject* child;
+        
+        for(const auto &child: this->getChildren()) {
+            Paddle* pNode = (Paddle*) child;
+        		CCLog("%s", pNode->getUuid());            	
+            if(pNode && pNode->getTag() == 2014 && !strcmp(pNode->getUuid(), sSession)){
+								CCLog("Find %s", sSession);            	
+                return true;	
+              }
+        }
+    }
+    
+
+   	return false;	
 }
