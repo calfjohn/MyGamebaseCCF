@@ -156,20 +156,17 @@ void HelloWorld::addNode(float dt)
 
 bool HelloWorld::findPaddle(const char* sSession)
 {
-    if(this->getChildrenCount() > 0 && sSession)
+    if(!sSession) return false;
+
+    for (auto& child : _children)
     {
-        CCObject* child;
-        
-        for(const auto &child: this->getChildren()) {
-            Paddle* pNode = (Paddle*) child;
-        		CCLog("%s", pNode->getUuid());            	
-            if(pNode && pNode->getTag() == 2014 && !strcmp(pNode->getUuid(), sSession)){
-								CCLog("Find %s", sSession);            	
-                return true;	
-              }
+        Paddle* pNode = (Paddle*) child;
+        if(pNode && pNode->getTag() == 2014
+           && !strcmp(pNode->getUuid(), sSession))
+        {
+            return true;
         }
     }
     
-
    	return false;	
 }

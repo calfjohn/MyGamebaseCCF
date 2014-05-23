@@ -1,4 +1,5 @@
 #include "Paddle.h"
+#include "platform/android/jni/JniHelper.h"
 
 Paddle::Paddle(void)
 {
@@ -69,7 +70,7 @@ void Paddle::onEnter()
     listener->onTouchMoved = CC_CALLBACK_2(Paddle::onTouchMoved, this);
     listener->onTouchEnded = CC_CALLBACK_2(Paddle::onTouchEnded, this);
     
-    _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);  
 }
 
 void Paddle::onExit()
@@ -86,13 +87,13 @@ bool Paddle::containsTouchLocation(Touch* touch)
 
 bool Paddle::onTouchBegan(Touch* touch, Event* event)
 {
-    CCLOG("Paddle::onTouchBegan id = %d, x = %f, y = %f", touch->getID(), touch->getLocation().x, touch->getLocation().y);
+    //CCLOG("Paddle::onTouchBegan id = %d, x = %f, y = %f", touch->getID(), touch->getLocation().x, touch->getLocation().y);
     
     if (_state != kPaddleStateUngrabbed) return false;
     if ( !containsTouchLocation(touch) ) return false;
     
     _state = kPaddleStateGrabbed;
-    CCLOG("return true");
+    //CCLOG("return true");
     return true;
 }
 
@@ -105,7 +106,7 @@ void Paddle::onTouchMoved(Touch* touch, Event* event)
     // you get Sets instead of 1 UITouch, so you'd need to loop through the set
     // in each touchXXX method.
     
-    CCLOG("Paddle::onTouchMoved id = %d, x = %f, y = %f", touch->getID(), touch->getLocation().x, touch->getLocation().y);
+    //CCLOG("Paddle::onTouchMoved id = %d, x = %f, y = %f", touch->getID(), touch->getLocation().x, touch->getLocation().y);
     
     CCASSERT(_state == kPaddleStateGrabbed, "Paddle - Unexpected state!");    
     
@@ -128,8 +129,26 @@ void Paddle::onTouchEnded(Touch* touch, Event* event)
     CCASSERT(_state == kPaddleStateGrabbed, "Paddle - Unexpected state!");    
     
     _state = kPaddleStateUngrabbed;
+    
+    JniMethodInfo t;
+    //JniHelper::getStaticMethodInfo(t, "org/cocos2dx/lib/Cocos2dxHelper", "getCocos2dxPackageName", "()Ljava/lang/String;");
+    if (JniHelper::getStaticMethodInfo(t, "org/cocos2dx/cpp/AppActivity", "setStringForKey", "(Ljava/lang/String;)V")) {
+      	  CCLOG("(JniHelper::getStaticMethodInfo1");
+         
+         jstring stringArg1 = t.env->NewStringUTF(uuid.getCString());
+         
+         CCLOG("(JniHelper::getStaticMethodInfo2");
+         
+         t.env->CallStaticVoidMethod(t.classID, t.methodID, stringArg1);
+         
+         CCLOG("(JniHelper::getStaticMethodInfo3");
+         
+         t.env->DeleteLocalRef(t.classID);
+         t.env->DeleteLocalRef(stringArg1);
+         } 
+      
+    	  CCLOG("(JniHelper::getStaticMethodInfo4");
 } 
-
 
 void Paddle::setUuid(const char *sUuid)
 {

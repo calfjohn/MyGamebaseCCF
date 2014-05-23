@@ -26,20 +26,15 @@ LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
 package org.cocos2dx.cpp;
 
-import java.util.UUID;
-
-public interface ISimpleDiscoveryListener {
-	
-	void lineReceived(int line);
-	void sessionListChanged();
-	void localSessionChanged();
+/**
+ * Interface from the ReadEngine and WriteEngine back to the hosting Service.
+ * <p>
+ * There is no c3 specific code here.
+ */
+public interface IServiceIOListener {
+	void lineReceived( int line );
 	void remoteDisconnect();
-	void connected(boolean didConnect);
-	void sessionsDiscovered();	
-	/*
-	 * Callback event to display invite alert pop to accept or reject the connection.
-	 */
-	public void inviteAlert(UUID inviterUuid, int inviteHandle, byte[] oobData);	
 }

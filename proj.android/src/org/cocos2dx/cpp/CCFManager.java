@@ -1,5 +1,7 @@
 package org.cocos2dx.cpp;
 
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -22,14 +24,31 @@ import com.intel.stc.lib.StcLib;
 import com.intel.stc.slib.StcServiceInet;
 import com.intel.stc.utility.StcApplicationId;
 import com.intel.stc.utility.StcSession;
+import com.intel.stc.utility.StcSocket;
 
-public class CCFManager extends StcServiceInet implements StcConnectionListener, StcSessionUpdateListener, StcLocalSessionUpdateListener, IStcActivity{
-
+public class CCFManager extends StcServiceInet implements 
+StcConnectionListener, StcSessionUpdateListener, StcLocalSessionUpdateListener, IServiceIOListener, IStcActivity{
 	private static final String TAG = "Cocos2dxCCFManager MyGame";
 	private boolean bundleParsed = false;
 	private Bundle initBundle;
+	StcSocket socket = null;
+	WriteEngine wengine;
+	ReadEngine rengine;
 	private ArrayList<ISimpleDiscoveryListener> listeners = new ArrayList<ISimpleDiscoveryListener>();
 
+	// The service handles one and only one connection. The state machine for
+	// the service
+	// state starts in NEVER_CONNECTED and ends with CONNECTION_CLOSED.
+	public enum ChatState {
+		NEVER_CONNECTED, // we have not yet connected
+		INVITE_SENT, // we have sent an invite.
+		INVITE_RECEIVED, // we have received an invite.
+		CONNECTED, // we are connected
+		CONNECTION_CLOSED // we have been connected, but are no longer.
+	};
+	
+	ChatState state = ChatState.NEVER_CONNECTED;
+	
 	@Override
 	public Intent GetCloudIntent() {
 		Log.i(TAG,"GetCloudIntent");
@@ -41,14 +60,6 @@ public class CCFManager extends StcServiceInet implements StcConnectionListener,
 		return intent;		
 	}
 	
-	//Service callback to inform the UI about sessions list getting updated.
-	private void postSessionListChanged() {
-		synchronized (listeners) {
-			for (ISimpleDiscoveryListener listen : listeners)
-				listen.sessionsDiscovered();
-		}
-	}	
-
 	@Override
 	public Class<?> GetUnboxActivityClass() {
 		Log.i(TAG,"GetUnboxActivityClass");
@@ -61,6 +72,19 @@ public class CCFManager extends StcServiceInet implements StcConnectionListener,
 		return MyAppRegister.id;
 	}
 
+	
+	@Override
+	public void localSessionUpdated() {
+		postSessionListChanged();		
+		Log.i(TAG, "localSessionUpdated");		
+	}
+
+	@Override
+	public void sessionUpdated(StcSessionUpdateEvent arg0) {
+		postSessionListChanged();
+		Log.i(TAG, "sessionUpdated");				
+	}
+	
 	@Override
 	public StcConnectionListener getConnListener() {
 		Log.i(TAG,"getConnListener");
@@ -126,26 +150,135 @@ public class CCFManager extends StcServiceInet implements StcConnectionListener,
 	//*******************StcConnectionListener*****************
 	
 	@Override
-	public void connectionCompleted(InviteResponseEvent arg0) {
+	public void connectionCompleted(InviteResponseEvent arg) {
 		Log.i(TAG,"connectionCompleted");
+		boolean connectionComplete = false;
+		synchronized (state) {
+			if (arg.getStatus() == InviteResponseEvent.InviteStatus.sqtAccepted) {
+				try {
+					socket = getSTCLib().getPreparedSocket(
+							arg.getSessionGuid(), arg.getConnectionHandle());
+
+					InputStream iStream = socket.getInputStream();
+					rengine = new ReadEngine(iStream, this);
+
+					OutputStream oStream = socket.getOutputStream();
+					wengine = new WriteEngine(oStream, this);
+
+					connectionComplete = true;
+				} catch (StcException e) {
+					Log.e(TAG, e.toString());
+				}
+			}
+
+			if (connectionComplete)
+				state = ChatState.CONNECTED;
+			else
+				state = ChatState.CONNECTION_CLOSED;
+		}
+		postConnected(connectionComplete);		
 	}
 
 	@Override
-	public void connectionRequest(InviteRequestEvent arg0) {
+	public void connectionRequest(InviteRequestEvent event) {
 		Log.i(TAG,"connectionRequest");
+		synchronized (state) {
+			//If the local user is already connected to the remote user, ignore the invites from other users.
+			if(state == ChatState.CONNECTED){
+				//Notify the other users on rejecting the invite.
+				rejectInvite(event.getConnectionHandle());
+				return;
+			}
+				
+			postInviteAlert(event.getSessionUuid(), event.getConnectionHandle(), event.getOOBData());
+		}		
 	}
+	
+	private void postInviteAlert(UUID inviterUuid, int inviteHandle, byte[] oobData) {
+		synchronized (listeners) {
+			for (ISimpleDiscoveryListener listen : listeners)
+				listen.inviteAlert(inviterUuid, inviteHandle, oobData);
+		}
+	}	
 
-	@Override
-	public void localSessionUpdated() {
-		postSessionListChanged();		
-		Log.i(TAG, "localSessionUpdated");		
-	}
+	/***
+	 * Attempt to accept the invitation if we have not already done so
+	 * 
+	 * @param uuid
+	 *            sessionguid
+	 * @param handle
+	 *            handle of the connection
+	 */
+	public void doConnectionRequest(UUID uuid, int handle) {
+		synchronized (state) {
+			if (state == ChatState.NEVER_CONNECTED || state == ChatState.CONNECTION_CLOSED) {
+				boolean connected = false;
+				try {
+					socket = getSTCLib().acceptInvitation(uuid, handle);
 
-	@Override
-	public void sessionUpdated(StcSessionUpdateEvent arg0) {
-		postSessionListChanged();
-		Log.i(TAG, "sessionUpdated");				
+					InputStream iStream = socket.getInputStream();
+					rengine = new ReadEngine(iStream, this);
+
+					OutputStream oStream = socket.getOutputStream();
+					wengine = new WriteEngine(oStream, this);
+					connected = true;
+				} catch (StcException e) {
+					Log.e(TAG, "exception on connection", e);
+				}
+
+				if (connected) {
+					Log.i(TAG, "connected");
+					state = ChatState.CONNECTED;
+				} else {
+					Log.i(TAG, "connection failed");
+					state = ChatState.CONNECTION_CLOSED;
+				}
+				postConnected(connected);
+			}
+		}
+
+	}	
+	
+	/***
+	 * Forces the service to shutdown and terminate.
+	 */
+	public void exitConnection() {
+		Log.i(TAG, "exit requested");
+		synchronized (state) {
+			state = ChatState.CONNECTION_CLOSED;
+
+			if (wengine != null)
+				wengine.stop();
+			if (rengine != null)
+				rengine.stop();
+			if (socket != null) {
+				try {
+					socket.close();
+				} catch (StcException e) {
+					Log.i(TAG, "", e);
+				}
+				socket = null;
+			}
+		}
 	}
+	
+	/***
+	 * Have the sdk reject the invitation that has timed out.
+	 * 
+	 * @param handle
+	 */
+	public void rejectInvite(int handle) {
+		StcLib lib = getSTCLib();
+		try {
+			if (lib != null)
+				lib.rejectInvitation(handle);
+			else
+				Log.e(TAG, "unexpected null in rejectInvite");
+		} catch (StcException e) {
+			Log.e(TAG, "unexpected exception", e);
+		}
+	}	
+
 
 	@Override
 	public void onStartClient(UUID arg0, int arg1) {
@@ -203,5 +336,99 @@ public class CCFManager extends StcServiceInet implements StcConnectionListener,
 			return listeners.remove(listener);
 		}
 	}	
+	
+	
+	/***
+	 * Request to invite a session.
+	 * 
+	 * @param session
+	 * @return true if an invitation was sent.
+	 */
+	public boolean inviteSession(StcSession session) {
+		synchronized (state) {
+			if (state != ChatState.NEVER_CONNECTED && state != ChatState.CONNECTION_CLOSED)
+				return false;
+			
+			if(!session.isAvailableProximity() && !session.isAvailableCloud())
+			{
+				Log.e(TAG, "Session is not available or expired");
+				return false;
+			}
+			try {
+				Log.i(TAG, "inviting session " + session.getSessionUuid().toString()
+						+ " " + session.getUserName());
+				//// The oobData can be anything, or null.  It's intention is to help identify the purpose of the invite.
+				byte[] oobData = (new String("TEST BLOB")).getBytes();
+				//byte[] oobData = null;
+
+				// Setting the invite timeout to 180 seconds.
+				getSTCLib().inviteSession(session.getSessionUuid(), oobData, (short) 180);
+				return true;
+			} catch (StcException e) {
+				Log.e(TAG, "invitation unexpected exception", e);
+			}
+
+		}
+
+		return false;
+	}
+	
+	private void postConnected(boolean connected) {
+		synchronized (listeners) {
+			for (ISimpleDiscoveryListener l : listeners)
+				l.connected(connected);
+		}
+	}
+
+	private void postSessionListChanged() {
+		synchronized (listeners) {
+			for (ISimpleDiscoveryListener l : listeners)
+				l.sessionsDiscovered();
+		}
+	}
+	
+	private void postLocalSessionChanged() {
+		synchronized (listeners) {
+			for (ISimpleDiscoveryListener l : listeners)
+				l.sessionsDiscovered();
+		}
+	}
+
+	@Override
+	public void lineReceived(int line) {
+		synchronized (listeners) {
+			for (ISimpleDiscoveryListener l : listeners)
+				l.lineReceived(line);
+		}		
+	}
+
+	@Override
+	public void remoteDisconnect() {
+		synchronized (listeners) {
+			for (ISimpleDiscoveryListener l : listeners) {
+				l.remoteDisconnect();
+			}
+		}
+		exitConnection();		
+	}
+	
+    public static void setStringForKey(String inviteUuid) {    	
+/*		Log.e(TAG, "setStringForKey is invoke");
+    	
+		StcSession newSession = null;
+		List<StcSession> newList = CCFManager.instance().getSessions();
+		for(StcSession user : newList){
+			if(user.getSessionUuid().toString().compareTo(inviteUuid)==0){
+				newSession = user;
+				break;
+			}
+		}		
 		
+		if(newSession == null) return;
+		
+		Log.e(TAG, "setStringForKey is invoke1");
+		
+		CCFManager.instance().inviteSession(newSession);
+		*/
+	}
 }

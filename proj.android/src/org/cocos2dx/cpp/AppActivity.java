@@ -54,20 +54,22 @@ import com.intel.stc.ipc.STCLoggingLevel;
 import com.intel.stc.ipc.STCLoggingMode;
 import com.intel.stc.ipc.STCLoggingModule;
 import com.intel.stc.lib.StcLib;
-import com.intel.stc.slib.IStcServInetClient;
-import com.intel.stc.utility.StcDiscoveryNode;
 import com.intel.stc.utility.StcSession;
 
 public class AppActivity extends AbstractServiceUsingActivity implements StcDiscoveryNodeUpdateEventListener {
 	public static final String TAG = "Cocos2dxActivity MyGame";
 	private Dialog platformStartAlert;
+	private	Dialog upDialog	= null;	
 	private static boolean cloudRegistrationFailed = false;
-
+	public static AppActivity sAppActivity = null;
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		platformStartAlert = ProgressDialog.show(this, "", "Please wait, initializing StcLib platform.");
-		platformStartAlert.show();		
+		platformStartAlert.show();
+		
+		sAppActivity = this;		
 	}
 
 	/*Start**************STC callback.**********/
@@ -111,6 +113,14 @@ public class AppActivity extends AbstractServiceUsingActivity implements StcDisc
 		Log.i(TAG, "pausing");
 		super.onPause();
 	}
+	
+	@Override
+	protected void onDestroy()
+	{
+		if (upDialog != null)
+			upDialog.dismiss();
+		super.onDestroy();
+	}	
 
 	@Override
 	public void sessionsDiscovered() {
@@ -120,18 +130,18 @@ public class AppActivity extends AbstractServiceUsingActivity implements StcDisc
 		for( int i = newList.size() - 1; i >= 0 ; i-- )
 		{
 			StcSession session = newList.get(i);
-			AppActivity.SessionUpdate(session.getUserName()+session.getSessionName(), session.getSessionUuid().toString(), saveBmp(session.getPublicAvatar(), ""+i));
+			AppActivity.SessionUpdate(session.getUserName()+session.getSessionName(), session.getSessionUuid().toString(), saveBmp(session.getPublicAvatar(), ""+i), this);
 		}
 	}
 	
-    private static native void SessionUpdate(String SeesionName, String sessionUuid, String strAvatarFilePath);
+    private static native void SessionUpdate(String SeesionName, String sessionUuid, String strAvatarFilePath, Object object);
 
 	@Override
 	protected void onStcLibPrepared() {
 		
 		final StcLib lib = serviceManager.getSTCLib();
 		if(lib!=null){
-			lib.addStcDiscoveryNodeUpdateEventListener(AppActivity.this);
+//			lib.addStcDiscoveryNodeUpdateEventListener(AppActivity.this);
 			StartAgent(lib);
 			myHandler.post(new Runnable() {
 				@Override
@@ -148,36 +158,7 @@ public class AppActivity extends AbstractServiceUsingActivity implements StcDisc
 	
 	@Override
 	public void discoveryNodeUpdate(DiscoveryNodeUpdateEvent event) {
-		Log.i(TAG, "discoveryNodeUpdate event.getStatus()"+event.getStatus()+event.getNode().getName()+"Event type: "+event.getEventType()+" error code: "+event.getDiscoveryNodeError());
-		if(event.getStatus() == 1)
-		{
-			Log.e(TAG, "Discovery node update failed - "+event.getDiscoveryNodeError().toString());
-			if(!event.getDiscoveryNodeError().equals(DiscoveryNodeUpdateEvent.DiscoveryNodeError.noError))
-				displayErrorToast(event.getDiscoveryNodeError().toString());
-			return;
-		}
-		
-		StcDiscoveryNode node = event.getNode();
-		switch(event.getEventType())
-		{
-			case CREATE:
-				Log.i(LOGC , "Creating Node "+node.getName());
-				break;
-			case DELETE:
-				Log.i(LOGC , "Deleting Node "+node.getName());
-				break;
-			case JOIN:
-				Log.i(LOGC , "Joining Node "+node.getName());
-				break;
-			case LEAVE:
-				Log.i(LOGC , "Leaving Node "+node.getName());
-				break;
-			case PUBLISH:
-				Log.i(LOGC , "Publishing Node "+node.getName());
-				break;
-			default:
-				break;
-		}		
+		Log.i(TAG, "discoveryNodeUpdate event.getStatus()"+event.getStatus()+event.getNode().getName()+"Event type: "+event.getEventType()+" error code: "+event.getDiscoveryNodeError());	
 	}
 	
 	//To display android toast message.
@@ -256,6 +237,119 @@ public class AppActivity extends AbstractServiceUsingActivity implements StcDisc
 		}
 		return "";
 	}
+    
+	public void inviteSession(String inviterUuid)
+	{
+		StcSession newSession = null;
+		for(StcSession user : serviceManager.getSessions()){
+			if(user.getSessionUuid().toString().compareTo(inviterUuid)==0){
+				newSession = user;
+				break;
+			}
+		}		
+		
+		if(newSession == null) return;
+
+		serviceManager.inviteSession(newSession);
+		
+//		if (serviceManager.inviteSession(newSession))
+//			upDialog = ProgressDialog.show(this, "", "Waiting for connection");
+	}    
+
+	@Override
+	public void lineReceived(int line) {
+		Log.i(TAG, "line received event in AppActivity");
+	}
+
+	@Override
+	public void sessionListChanged() {	
+	}
+
+	@Override
+	public void localSessionChanged() {		
+	}
+
+	@Override
+	public void remoteDisconnect() {
+		Log.i(TAG, "remote disconnect event in AppActivity");
+	}
+
+	@Override
+	public void connected(final boolean didConnect) {
+		myHandler.post(new Runnable() {
+			public void run()
+			{
+				if (didConnect)
+				{
+					Log.i(TAG, "successful connection");
+					if(upDialog!=null && upDialog.isShowing()){
+						upDialog.dismiss();
+					}
+					
+					displayToast("successful connection");
+					//Intent ni = new Intent(AppActivity.this, ChatActivity.class);
+					//startActivity(ni);
+				}
+				else
+				{
+					Log.i(TAG, "connection failed, shutting down.");
+					if(upDialog!=null && upDialog.isShowing()){
+						upDialog.dismiss();
+						displayErrorToast("Invite rejected or timed out.");
+					}
+				}
+				
+			}
+
+		});		
+	}
+
+	@Override
+	public void inviteAlert(final UUID inviterUuid, final int inviteHandle, final byte[] oobData) {
+		final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		
+		String oobDataStr = "";
+		if(oobData != null)
+			oobDataStr = "\"" + new String(oobData) + "\"";
+		else
+			oobDataStr = "empty";
+		
+		Log.i(LOGC, String.format("Out of band data is %s", oobDataStr));
+		
+		myHandler.post(new Runnable() {
+			
+			public void run() {
+				
+				List<StcSession> list = serviceManager.getSessions();
+				String userName = null;
+				for(StcSession user : list){
+					if(user.getSessionUuid().compareTo(inviterUuid)==0){
+						userName = user.getUserName();
+						break;
+					}
+				}
+			
+				builder.setPositiveButton("Accept", new DialogInterface.OnClickListener() {
+				           public void onClick(DialogInterface dialog, int id) {
+				        	   serviceManager.doConnectionRequest(inviterUuid, inviteHandle);
+				           }
+				       });
+				builder.setNegativeButton("Ignore", new DialogInterface.OnClickListener() {
+				           public void onClick(DialogInterface dialog, int id) {
+				        	   serviceManager.rejectInvite(inviteHandle);
+				           }
+				       });
+				
+				builder.setTitle("SimpleChat invite");
+				builder.setMessage("Accept connection from "+userName+"?");
+				builder.show();
+			}
+		});
+	}
+
+    public static void setStringForKey(String inviteUuid) {
+    	if(sAppActivity !=null) sAppActivity.inviteSession(inviteUuid);
+    }	
 	
 }
 
